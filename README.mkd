@@ -1,6 +1,6 @@
 (*
 
-<p><font size=6>PROJET MLSF - ENSIIE 2015</font></p>
+<p><font size=6>PROJET IPRF - ENSIIE 2015</font></p>
 
 <p><font size=4>Thomas Sarboni</font></p>
 
