@@ -91,12 +91,12 @@ assert ( ( rect_top rect0 ) = 1. ) ;;
 *)
 (* Retourne la longueur d'un rectangle *)
 let rect_length = fun r ->
-    let R ( ( x, y ), ( x', y' ) ) = r in x' -. x
+    let R ( ( x, y ), ( x', y' ) ) = r in abs_float ( x' -. x )
 ;;
 
 (* Retoure la hauteur d'un rectangle *)
 let rect_height = fun r ->
-    let R ( ( x, y ), ( x', y' ) )  = r in y -. y'
+    let R ( ( x, y ), ( x', y' ) )  = r in abs_float ( y -. y' )
 ;;
 
 (* Tests *)
@@ -351,6 +351,8 @@ assert ( list1 = ( list_of_quadtree quad1 ) ) ;;
 2.11 Fonction insert
 --------------------
 
+#### Fonctions préliminaires
+
 ```caml
 *)
 (* Donne pour un QuadTree son premier fils (BONUS) *)
@@ -413,6 +415,13 @@ let quad04' = Q ( rect04, Empty ) ;;
 let quad04'' = quad_split quad04' ;;
 assert ( ( quad_get_first_child quad04'' ) = quad0 ) ;;
 
+(*
+```
+#### Fonction insert
+
+```caml
+*)
+
 (* Insert un objet dans un QuadTree à partir d'un nom et de cordonnées *)
 (* Il n'a pas été précisé dans le sujet si il fallait accepter des coordonnées
  * situées hors du rectangle initial et donc étendre le QuadTree. Je vais
@@ -441,6 +450,12 @@ let rec insert = fun q -> fun c -> fun n ->
             else
                 assert false
 ;;
+(*
+```
+#### Quelque tests
+
+```caml
+*)
 
 (* Tests *)
 let cE = ( 4.5, 1. ) ;;
@@ -528,21 +543,6 @@ let quadtree_of_list = fun l ->
     List.fold_left ( fun acc e -> let ( c, n ) = e in insert acc c n ) q l
 ;;
 
-(* Donne pour une liste de coordonnées le QuadTree correspondant
- * mais cette fois on spécifie la taille initiale et on ajoute que les
- * points qui sont dans ce rectangle (BONUS) *)
-let quadtree_of_list' = fun l -> fun r ->
-    let q = Q ( r, Empty ) in
-    let add_if_member = fun q -> fun ( c, n ) ->
-        if rect_mem r d then
-            insert q c n
-        else
-            q
-    in
-    List.fold_left add_if_member q l
-;;
-
-
 (* Tests *)
 let quad11 = quadtree_of_list list1 ;;
 assert ( ( quadtree_of_list list1 ) = quad1 ) ;;
@@ -551,6 +551,9 @@ assert ( ( quadtree_of_list list1 ) = quad1 ) ;;
 
 2.13 Fonction remove
 --------------------
+
+#### Une première version utilisant une liste
+
 
 ```caml
 *)
@@ -570,6 +573,13 @@ let remove = fun q -> fun o ->
 (* Tests *)
 let list2 = [ ( cC, 'C' ); ( cB, 'B' ); ( cD, 'D' ) ] ;;
 assert ( ( list_of_quadtree ( remove quad1 ( cA, 'A' ) ) ) = list2 ) ;;
+
+(*
+```
+#### Une seconde version plus performante
+
+```caml
+*)
 
 (* Supprime la subdivision d'un quadtree si celle-ci n'est pas utile (BONUS) *)
 let clean_quad = fun quad ->
@@ -616,7 +626,7 @@ let rec remove' = fun q -> fun o ->
 
 (* Tests *)
 assert ( ( list_of_quadtree ( remove' quad1 ( cA, 'A' ) ) ) = list2 ) ;;
-assert ( ( remove' quad3 c_G ) = quad2 ) ;;
+assert ( ( remove' quad3 ( cG, 'G' ) ) = quad2 ) ;;
 (*
 ```
 
@@ -630,7 +640,7 @@ assert ( ( remove' quad3 c_G ) = quad2 ) ;;
 (* #use "display.ml" ;; *)
 
 (* draw_data: (float * float * float) -> ('a -> string) -> coord * 'a
- *            -> Graphics.color -> unit
+ *           -> Graphics.ceolor -> unit
  *)
 let draw_data = fun (sx,sy,z) data_to_string data col ->
     let ((cx,cy), label) = data in
@@ -667,7 +677,10 @@ let rec draw_quadtree = fun dparams data_to_string qt ->
             let _ = draw_quadtree dparams data_to_string sw in
             ()
 ;;
-
+(*
+```
+```caml
+*)
 (* wait_and_quit: unit -> unit
  *)
 let wait_and_quit = fun () ->
@@ -871,6 +884,14 @@ let simple_test'' = fun qt f ->
 (*
 ```
 
+Le problème est le suivant :
+
+Utilser rect_length provoque un arrondi lors du calcul de la longueur.
+
+Celà provoque une légère incohérence entre les rectangle contenants et
+les rectangles contenus, ce qui se traduit à l'affichage des varaiations de taille
+de marge.
+
 4. Placement du disque
 ======================
 
@@ -897,9 +918,24 @@ assert ( collision_disk_point c1 p1 ) ;;
 
 ```caml
 *)
+
+(* Donne pour une liste de coordonnées le QuadTree correspondant
+ * mais cette fois on spécifie la taille initiale et on ajoute que les
+ * points qui sont dans ce rectangle (BONUS) *)
+let quadtree_of_list' = fun l -> fun r ->
+    let q = Q ( r, Empty ) in
+    let add_if_member = fun q -> fun ( c, n ) ->
+        if rect_mem r c then
+            insert q c n
+        else
+            q
+    in
+    List.fold_left add_if_member q l
+;;
+
 (* clip : Donne pour un quadtree q et un rectangle r, un QuadTree correspondant
  * aux éléments de q dans r  *)
-let clip' = fun q -> fun r ->
+let clip = fun q -> fun r ->
     let l = list_of_quadtree q in
     quadtree_of_list' l r
 ;;
@@ -1237,7 +1273,7 @@ let simulation_move'' = fun qt -> fun f ->
 ;;
 
 (* Tests *)
-(* simulation_move'' quad1'' Char.escaped ;; *)
+simulation_move'' quad1'' Char.escaped ;;
 (*
 ```
 *)
