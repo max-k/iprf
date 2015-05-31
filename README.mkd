@@ -1,5 +1,9 @@
 (*
 
+<p><font size=6>PROJET MLSF - ENSIIE 2015</font></p>
+
+<p><font size=4>Thomas Sarboni</font></p>
+
 1. Echauffement sur les rectangles
 ==================================
 
@@ -524,6 +528,21 @@ let quadtree_of_list = fun l ->
     List.fold_left ( fun acc e -> let ( c, n ) = e in insert acc c n ) q l
 ;;
 
+(* Donne pour une liste de coordonnées le QuadTree correspondant
+ * mais cette fois on spécifie la taille initiale et on ajoute que les
+ * points qui sont dans ce rectangle (BONUS) *)
+let quadtree_of_list' = fun l -> fun r ->
+    let q = Q ( r, Empty ) in
+    let add_if_member = fun q -> fun ( c, n ) ->
+        if rect_mem r d then
+            insert q c n
+        else
+            q
+    in
+    List.fold_left add_if_member q l
+;;
+
+
 (* Tests *)
 let quad11 = quadtree_of_list list1 ;;
 assert ( ( quadtree_of_list list1 ) = quad1 ) ;;
@@ -554,45 +573,21 @@ assert ( ( list_of_quadtree ( remove quad1 ( cA, 'A' ) ) ) = list2 ) ;;
 
 (* Supprime la subdivision d'un quadtree si celle-ci n'est pas utile (BONUS) *)
 let clean_quad = fun quad ->
-    let _ = Printf.printf "Tentative de reduction\n" in
     match quad with
     | Q ( _, ( Empty | Leaf ( _, _ ) ) ) -> assert false
     | Q ( rect, Node ( q0, q1, q2, q3 ) ) ->
         match q0, q1, q2, q3 with
         | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case vide\n" in
             Q ( rect, Empty )
-        | Q ( _, Leaf ( _ ) ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à une feuille q0\n" in
-            let Q ( _, cell ) = q0 in
-            Q ( rect, cell )
-        | Q ( _, Empty ), Q ( _, Leaf ( _ ) ), Q ( _, Empty ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à une feuille q1\n" in
-            let Q ( _, cell ) = q1 in
-            Q ( rect, cell )
-        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Leaf ( _ ) ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à une feuille q2\n" in
-            let Q ( _, cell ) = q2 in
-            Q ( rect, cell )
-        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Leaf ( _ ) ) ->
-            let _ = Printf.printf "Reduction case à une feuille q3\n" in
-            let Q ( _, cell ) = q3 in
-            Q ( rect, cell )
-        | Q ( _, Node ( _ ) ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à un noeud q0\n" in
-            q0
-        | Q ( _, Empty ), Q ( _, Node ( _ ) ), Q ( _, Empty ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à un noeud q1\n" in
-            q1
-        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Node ( _ ) ), Q ( _, Empty ) ->
-            let _ = Printf.printf "Reduction case à un noeud q2\n" in
-            q2
-        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Node ( _ ) ) ->
-            let _ = Printf.printf "Reduction case à un noeud q3\n" in
-            q3
-        | _ ->
-            let _ = Printf.printf "Pas de reduction\n" in
-            quad
+        | Q ( _, content ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ) ->
+            Q ( rect, content )
+        | Q ( _, Empty ), Q ( _, content ), Q ( _, Empty ), Q ( _, Empty ) ->
+            Q ( rect, content )
+        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, content ), Q ( _, Empty ) ->
+            Q ( rect, content )
+        | Q ( _, Empty ), Q ( _, Empty ), Q ( _, Empty ), Q ( _, content ) ->
+            Q ( rect, content )
+        | _ -> quad
 ;;
 
 (* Donne pour un QuadTree et un élément un QuadTree privé de cet élément *)
@@ -600,36 +595,29 @@ let clean_quad = fun quad ->
 let rec remove' = fun q -> fun o ->
     let ( c, _ ) = o in
     match q with
-    | Q ( r, Empty ) ->
-        let _ = Printf.printf "Empty\n" in
-        q
-    | Q ( r, Leaf ( _, _) ) ->
-        let _ = Printf.printf "Feuille\n" in
-        Q ( r, Empty )
+    | Q ( r, Empty ) -> assert false
+    | Q ( r, Leaf ( _, _) ) -> Q ( r, Empty )
     | Q ( r, Node ( q0, q1, q2, q3 ) ) ->
         if ( rect_mem ( boundary q0 ) c ) then
-            let _ = Printf.printf "Noeud q0\n" in
-            let q' = Q ( r, Node ( remove q0 o, q1, q2, q3 ) ) in
+            let q' = Q ( r, Node ( ( remove' q0 o ), q1, q2, q3 ) ) in
             clean_quad q'
         else if ( rect_mem ( boundary q1 ) c ) then
-            let _ = Printf.printf "Noeud q1\n" in
-            let q' = Q ( r, Node ( q0, remove q1 o, q2, q3 ) ) in
+            let q' = Q ( r, Node ( q0, ( remove' q1 o ), q2, q3 ) ) in
             clean_quad q'
         else if ( rect_mem ( boundary q2 ) c ) then
-            let _ = Printf.printf "Noeud q2\n" in
-            let q' = Q ( r, Node ( q0, q1, remove q2 o, q3 ) ) in
+            let q' = Q ( r, Node ( q0, q1, ( remove' q2 o ), q3 ) ) in
             clean_quad q'
         else if ( rect_mem ( boundary q3 ) c ) then
-            let _ = Printf.printf "Noeud q3\n" in
-            let q' = Q ( r, Node ( q0, q1, q2, remove q3 o ) ) in
+            let q' = Q ( r, Node ( q0, q1, q2, ( remove' q3 o ) ) ) in
             clean_quad q'
         else
             assert false
 ;;
 
-(*
 (* Tests *)
 assert ( ( list_of_quadtree ( remove' quad1 ( cA, 'A' ) ) ) = list2 ) ;;
+assert ( ( remove' quad3 c_G ) = quad2 ) ;;
+(*
 ```
 
 3. Représentation graphique d'un QuadTree et tests
@@ -909,32 +897,11 @@ assert ( collision_disk_point c1 p1 ) ;;
 
 ```caml
 *)
-(* clip' : Donne pour un quadtree q et un rectangle r, un QuadTree correspondant
+(* clip : Donne pour un quadtree q et un rectangle r, un QuadTree correspondant
  * aux éléments de q dans r  *)
-let rec clip' = fun q -> fun r ->
-    let rq = boundary q in
-    if ( not ( rect_intersect rq r ) ) then
-        Q ( rq, Empty )
-    else
-        match q with
-        | Q ( _, Empty ) -> q
-        | Q ( _, Leaf ( c, _ ) ) ->
-            if ( rect_mem r c ) then
-                q
-            else
-                Q ( rq, Empty )
-        | Q ( r', Node ( q0, q1, q2, q3 ) ) ->
-            let q0' = clip' q0 r in
-            let q1' = clip' q1 r in
-            let q2' = clip' q2 r in
-            let q3' = clip' q3 r in
-            Q ( r', Node ( q0', q1', q2', q3' ) )
-;;
-
-(* clip : Simplifie le quadtree renvoyé par clip' (BONUS) *)
-let clip = fun q -> fun r ->
-    let q' = clip' q r in
-    clean_quad q'
+let clip' = fun q -> fun r ->
+    let l = list_of_quadtree q in
+    quadtree_of_list' l r
 ;;
 
 (* Tests *)
@@ -943,7 +910,9 @@ assert ( list_of_quadtree ( clip quad1 ( boundary quad1 ) ) = list1 ) ;;
 assert ( clip quad1 ( boundary quad1 ) = quad1 ) ;;
 assert ( clip quad2 ( boundary quad2 ) = quad2 ) ;;
 assert ( clip quad3 ( boundary quad3 ) = quad3 ) ;;
-assert ( clip quad3 ( boundary quad1 ) = quad1'' ) ;;
+let lqc1 = list_of_quadtree ( clip quad3 ( boundary quad1 ) ) ;;
+let lqc2 = list_of_quadtree quad1 ;;
+assert ( lqc1 = lqc2 ) ;;
 (*
 ```
 
@@ -1099,9 +1068,11 @@ let collision_trail_point = fun p -> fun q -> fun r -> fun m ->
     let ( a, b ) = m in
     let ( x, y ) = p in
     let ( x', y' ) = q in
+    let pmpq = ( a -. x ) *. ( x' -. x ) +. ( b -. y ) *. ( y' -. y ) in
+    let qmqp = ( a -. x' ) *. ( x -. x' ) +. ( b -. y' ) *. ( y -. y' ) in
     let n = abs_float ((y' -. y) *. a -. (x' -. x) *. b +. x' *. y -. y' *. x) in
     let d = sqrt ((x' -. x) ** 2. +. (y' -. y) ** 2.) in
-    if ( n /. d <= r ) then
+    if ( n /. d <= r && pmpq >= 0. && qmqp >= 0. ) then
         true
     else
         false
@@ -1266,7 +1237,7 @@ let simulation_move'' = fun qt -> fun f ->
 ;;
 
 (* Tests *)
-simulation_move'' quad1'' Char.escaped ;;
+(* simulation_move'' quad1'' Char.escaped ;; *)
 (*
 ```
 *)
